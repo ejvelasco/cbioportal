@@ -1,16 +1,7 @@
 /*
- * Copyright (c) 2015 Memorial Sloan-Kettering Cancer Center.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
- * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
- * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
- * obligations to provide maintenance, support, updates, enhancements or
- * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
- * liable to any party for direct, indirect, special, incidental or
- * consequential damages, including lost profits, arising out of the use of this
- * software and its documentation, even if Memorial Sloan-Kettering Cancer
- * Center has been advised of the possibility of such damage.
+ * Copyright (c) 2017 The Hyve B.V.
+ * This code is licensed under the GNU Affero General Public License (AGPL),
+ * version 3, or (at your option) any later version.
  */
 
 /*
@@ -30,16 +21,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * @author Sander Tan
+*/
+
 package org.mskcc.cbio.portal.scripts;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
-import java.net.URL;
 
 import org.mskcc.cbio.portal.dao.DaoGeneOptimized;
 import org.mskcc.cbio.portal.model.CanonicalGene;
@@ -58,46 +51,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class TestImportGeneData {
 
-    //private String geneDataFilename = null;
-    //private String suppGeneDataFilename = null;
-    private URL geneDataFilePath;
-    private URL suppGeneDataFilePath;
-    
-    @Before
-    public void setUp() {
-
-        //Old implementation, hardcoding file path into a string
-        //geneDataFilename = home + File.separator + "core/target/test-classes/genes_test.txt";
-        //suppGeneDataFilename = home + File.separator + "core/target/test-classes/supp-genes.txt";
-        geneDataFilePath = this.getClass().getResource("/genes_test.txt");
-        suppGeneDataFilePath = this.getClass().getResource("/supp-genes.txt");
-
-    }
-
     @Test
     public void testImportGeneData() throws Exception {
         DaoGeneOptimized daoGene = DaoGeneOptimized.getInstance();
         ProgressMonitor.setConsoleMode(false);
-		// TBD: change this to use getResourceAsStream()
-        if (suppGeneDataFilePath!=null) {
-            File file = new File(suppGeneDataFilePath.getFile());
-            ImportGeneData.importSuppGeneData(file);
-        }
+	
+        // TBD: change this to use getResourceAsStream()
+        File file = new File("src/test/resources/supp-genes.txt");
+
+        ImportGeneData.importSuppGeneData(file);
         
-        if (geneDataFilePath != null) {
-            File file = new File(geneDataFilePath.getFile());
-            ImportGeneData.importData(file);
+        file = new File("src/test/resources/genes_test.txt");
+        ImportGeneData.importData(file);
 
-            CanonicalGene gene = daoGene.getGene(10);
-            assertEquals("NAT2", gene.getHugoGeneSymbolAllCaps());
-            gene = daoGene.getGene(15);
-            assertEquals("AANAT", gene.getHugoGeneSymbolAllCaps());
+        CanonicalGene gene = daoGene.getGene(10);
+        assertEquals("NAT2", gene.getHugoGeneSymbolAllCaps());
+        gene = daoGene.getGene(15);
+        assertEquals("AANAT", gene.getHugoGeneSymbolAllCaps());
 
-            gene = daoGene.getGene("ABCA3");
-            assertEquals(21, gene.getEntrezGeneId());
-        }
-        else {
-            throw new IllegalArgumentException("Cannot find test gene file, is PORTAL_HOME set?");
-        }
+        gene = daoGene.getGene("ABCA3");
+        assertEquals(21, gene.getEntrezGeneId());
     }
 }
