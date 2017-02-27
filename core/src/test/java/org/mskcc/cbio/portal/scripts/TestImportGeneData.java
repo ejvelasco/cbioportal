@@ -1,7 +1,16 @@
 /*
- * Copyright (c) 2017 The Hyve B.V.
- * This code is licensed under the GNU Affero General Public License (AGPL),
- * version 3, or (at your option) any later version.
+ * Copyright (c) 2015 Memorial Sloan-Kettering Cancer Center.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY, WITHOUT EVEN THE IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS
+ * FOR A PARTICULAR PURPOSE. The software and documentation provided hereunder
+ * is on an "as is" basis, and Memorial Sloan-Kettering Cancer Center has no
+ * obligations to provide maintenance, support, updates, enhancements or
+ * modifications. In no event shall Memorial Sloan-Kettering Cancer Center be
+ * liable to any party for direct, indirect, special, incidental or
+ * consequential damages, including lost profits, arising out of the use of this
+ * software and its documentation, even if Memorial Sloan-Kettering Cancer
+ * Center has been advised of the possibility of such damage.
  */
 
 /*
@@ -19,10 +28,6 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-/*
- * @author Sander Tan
 */
 
 package org.mskcc.cbio.portal.scripts;
@@ -56,7 +61,6 @@ public class TestImportGeneData {
         DaoGeneOptimized daoGene = DaoGeneOptimized.getInstance();
         ProgressMonitor.setConsoleMode(false);
 	
-        // TBD: change this to use getResourceAsStream()
         File file = new File("src/test/resources/supp-genes.txt");
 
         ImportGeneData.importSuppGeneData(file);

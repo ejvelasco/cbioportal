@@ -54,7 +54,7 @@ public class ImportTabDelimData {
     public static final String CNA_VALUE_HOMOZYGOUS_DELETION = "-2";
     public static final String CNA_VALUE_PARTIAL_DELETION = "-1.5";
     public static final String CNA_VALUE_ZERO = "0";
-    private HashSet<Long> importedGeneset = new HashSet<Long>();
+    private HashSet<Long> importSetOfGenes = new HashSet<Long>();
     private HashSet<Integer> importedGeneticEntitySet = new HashSet<>(); 
     private File mutationFile;
     private String targetLine;
@@ -199,7 +199,7 @@ public class ImportTabDelimData {
 	
 	        //Object to insert records in the generic 'genetic_alteration' table: 
 	        DaoGeneticAlteration daoGeneticAlteration = DaoGeneticAlteration.getInstance();
-                
+	
 	        //cache for data found in  cna_event' table:
 	        Map<CnaEvent.Event, CnaEvent.Event> existingCnaEvents = null;	        
 	        if (discretizedCnaProfile) {
@@ -496,8 +496,7 @@ public class ImportTabDelimData {
             String values[] = (String[]) ArrayUtils.subarray(parts, sampleStartIndex, parts.length>nrColumns?nrColumns:parts.length);
             values = filterOutNormalValues(filteredSampleIndices, values);
             
-            // necessary to specify Geneset from model pkg for now, until Geneset in core model pkg removed
-            org.mskcc.cbio.portal.model.Geneset geneset = DaoGeneset.getGenesetByExternalId(parts[genesetIdIndex]);
+            Geneset geneset = DaoGeneset.getGenesetByExternalId(parts[genesetIdIndex]);
             if (geneset !=  null) {
                 storedRecord = storeGeneticEntityGeneticAlterations(values, daoGeneticAlteration, geneset.getGeneticEntityId(), 
                         DaoGeneticEntity.EntityTypes.GENE_SET, geneset.getExternalId());
@@ -515,9 +514,9 @@ public class ImportTabDelimData {
         //  This is an important check, because a GISTIC or RAE file may contain
         //  multiple rows for the same gene, and we only want to import the first row.
 		try {
-	        if (!importedGeneset.contains(gene.getEntrezGeneId())) {
+	        if (!importSetOfGenes.contains(gene.getEntrezGeneId())) {
 	            daoGeneticAlteration.addGeneticAlterations(geneticProfileId, gene.getEntrezGeneId(), values);
-	            importedGeneset.add(gene.getEntrezGeneId());
+	            importSetOfGenes.add(gene.getEntrezGeneId());
 	            return true;
 	        }
 	        else {

@@ -134,6 +134,3 @@ public class TestImportGenesetHierarchyData {
 	    }
 	}
 }
-
-
-

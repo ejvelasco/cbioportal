@@ -36,7 +36,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
-
 import org.mskcc.cbio.portal.dao.*;
 import org.mskcc.cbio.portal.model.CancerStudy;
 import org.mskcc.cbio.portal.model.GenesetInfo;
@@ -44,7 +43,6 @@ import org.mskcc.cbio.portal.model.GeneticAlterationType;
 import org.mskcc.cbio.portal.model.GeneticProfile;
 import org.mskcc.cbio.portal.model.GeneticProfileLink;
 import org.mskcc.cbio.portal.scripts.TrimmedProperties;
-
 
 /**
  * Prepare a GeneticProfile for having its data loaded.
@@ -98,52 +96,11 @@ public class GeneticProfileReader {
         GeneticProfileLink geneticProfileLink = null;
 
 		// For GSVA profiles, we want to check that the version in the meta file is
-        // the same as the version of the gene sets in the database (genesets_info table)
+        // the same as the version of the gene sets in the database (genesets_info table).
+        // Also the source_stable_id must be in the database, to create a genetic profile link.
     	if (geneticProfile.getGeneticAlterationType() == GeneticAlterationType.GENESET_SCORE) {
-            GenesetInfo genesetInfo = DaoGenesetInfo.getGenesetInfo();
-
-            // Check if version is present in database
-            if (genesetInfo.getVersion() == null) {
-            	throw new RuntimeException("Attempted to import GENESET_SCORE data, but all gene set tables are empty. "
-            			+ "Please load gene sets with ImportGenesetData.pl first.");
-
-            // Check if version is present in meta file
-    		} else if (geneticProfile.getOtherMetaDataField("geneset_def_version") == null) {
-                throw new RuntimeException("Missing geneset_def_version property in '" + file.getPath() + "'. This version must be "
-                		+ "the same as the gene set version loaded with ImportGenesetData.pl .");
-                
-            // Check if version is same as database version
-    		} else if (!geneticProfile.getOtherMetaDataField("geneset_def_version").equals(genesetInfo.getVersion())) {
-                throw new RuntimeException("'geneset_def_version' property (" + geneticProfile.getOtherMetaDataField("geneset_def_version") +
-                		") in '" + file.getPath() + "' differs from database version (" + genesetInfo.getVersion() + ").");
-    		}
-            
-            // Prevent p-value profile to show up as selectable genomic profile
-            if (geneticProfile.getDatatype().equals("P-VALUE")) {
-                geneticProfile.setShowProfileInAnalysisTab(false);
-            }
-            
-            // Add entry to `genetic_profile_link`
-            geneticProfileLink = new GeneticProfileLink();
-            
-            // Set `REFERRED_GENETIC_PROFILE_ID`
-            String referredGeneticProfileStableId = parseStableId(geneticProfile.getAllOtherMetadataFields(), "source_stable_id");
-            if (referredGeneticProfileStableId == null) {
-            	throw new RuntimeException("'source_stable_id' is required in meta file for " + geneticProfile.getStableId());
-            }
-            GeneticProfile referredGeneticProfile = DaoGeneticProfile.getGeneticProfileByStableId(referredGeneticProfileStableId);
-            geneticProfileLink.setReferredGeneticProfileId(referredGeneticProfile.getGeneticProfileId());
-
-            // Decide reference type
-            // In the future with other types of genetic profile links, this should be configurable in the meta file. 
-            String referenceType;
-            if (geneticProfile.getDatatype().equals("P-VALUE")) {
-            	referenceType = "STATISTIC";
-            } else {
-            	referenceType = "AGGREGATION";
-            }
-            // Set `REFERENCE_TYPE`
-            geneticProfileLink.setReferenceType(referenceType);
+            validateGenesetProfile(geneticProfile, file);
+            geneticProfileLink = createGeneticProfileLink(geneticProfile);
     	}
 
         // add new profile
@@ -161,9 +118,59 @@ public class GeneticProfileReader {
         GeneticProfile gp = DaoGeneticProfile.getGeneticProfileByStableId(geneticProfile.getStableId());
         geneticProfile.setGeneticProfileId(gp.getGeneticProfileId());
         return geneticProfile;
-   }
+    }
 
-    /**
+    private static GeneticProfileLink createGeneticProfileLink(GeneticProfile geneticProfile) {
+    	GeneticProfileLink geneticProfileLink = new GeneticProfileLink();
+        
+        // Set `REFERRED_GENETIC_PROFILE_ID`
+        String referredGeneticProfileStableId = parseStableId(geneticProfile.getAllOtherMetadataFields(), "source_stable_id");
+        if (referredGeneticProfileStableId == null) {
+        	throw new RuntimeException("'source_stable_id' is required in meta file for " + geneticProfile.getStableId());
+        }
+        GeneticProfile referredGeneticProfile = DaoGeneticProfile.getGeneticProfileByStableId(referredGeneticProfileStableId);
+        geneticProfileLink.setReferredGeneticProfileId(referredGeneticProfile.getGeneticProfileId());
+
+        // Decide reference type
+        // In the future with other types of genetic profile links, this should be configurable in the meta file. 
+        String referenceType;
+        if (geneticProfile.getDatatype().equals("P-VALUE")) {
+        	referenceType = "STATISTIC";
+        } else {
+        	referenceType = "AGGREGATION";
+        }
+        // Set `REFERENCE_TYPE`
+        geneticProfileLink.setReferenceType(referenceType);
+        
+        return geneticProfileLink;
+	}
+
+	private static void validateGenesetProfile(GeneticProfile geneticProfile, File file) throws DaoException {
+    	GenesetInfo genesetInfo = DaoGenesetInfo.getGenesetInfo();
+    	// TODO Auto-generated method stub
+    	// Check if version is present in database
+    	if (genesetInfo.getVersion() == null) {
+    		throw new RuntimeException("Attempted to import GENESET_SCORE data, but all gene set tables are empty. "
+    				+ "Please load gene sets with ImportGenesetData.pl first.");
+
+    		// Check if version is present in meta file
+    	} else if (geneticProfile.getOtherMetaDataField("geneset_def_version") == null) {
+    		throw new RuntimeException("Missing geneset_def_version property in '" + file.getPath() + "'. This version must be "
+    				+ "the same as the gene set version loaded with ImportGenesetData.pl .");
+
+    		// Check if version is same as database version
+    	} else if (!geneticProfile.getOtherMetaDataField("geneset_def_version").equals(genesetInfo.getVersion())) {
+    		throw new RuntimeException("'geneset_def_version' property (" + geneticProfile.getOtherMetaDataField("geneset_def_version") +
+    				") in '" + file.getPath() + "' differs from database version (" + genesetInfo.getVersion() + ").");
+    	}
+
+    	// Prevent p-value profile to show up as selectable genomic profile
+    	if (geneticProfile.getDatatype().equals("P-VALUE")) {
+    		geneticProfile.setShowProfileInAnalysisTab(false);
+    	}
+    }
+
+	/**
      * Load a GeneticProfile from a description file.
      *
      * @author Ethan Cerami

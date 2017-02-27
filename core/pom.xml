@@ -10,7 +10,7 @@
   <artifactId>core</artifactId>
   <name>Portal Core</name>
   <description>Core libraries shared among other modules</description>
-   
+
   <dependencies>
     <dependency>
       <groupId>org.mskcc.cbio</groupId>

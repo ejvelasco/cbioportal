@@ -2146,7 +2146,6 @@ class TimelineValidator(Validator):
         super(TimelineValidator, self).checkLine(data)
         # TODO check the values
 
-
 class CancerTypeValidator(Validator):
 
     """Validator for tab-separated cancer type definition files."""

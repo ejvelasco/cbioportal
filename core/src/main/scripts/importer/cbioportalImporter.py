@@ -238,7 +238,7 @@ def process_directory(jvm_args, study_directory):
     for meta_filename, data_filename in regular_filepairs:
         import_study_data(jvm_args, meta_filename, data_filename)
 
-    # Now import gene set genetic profiles.
+    # Now import gsva genetic profiles
     if gsva_score_filepair is not None:
         # First import the score data
         meta_filename, data_filename = gsva_score_filepair
