@@ -92,20 +92,31 @@ public class GeneticProfileReader {
                 return gp;
             }
         }
-
+        
+        // For GSVA profiles, we want to create a geneticProfileLink from source_stable_id for:
+        // - expression zscores -> expression
+        // - gsva scores -> expression
+        // - gsva pvalues -> gsva scores
+        // Currently we only create geneticProfileLink for expression zscores when it's available. 
+        // This geneticProfileLink is required for the oncoprint in a GSVA study. In the future it might
+        // be useful to make this a requirement for every expression zscore file.
         GeneticProfileLink geneticProfileLink = null;
-
-		// For GSVA profiles, we want to check that the version in the meta file is
-        // the same as the version of the gene sets in the database (genesets_info table).
-        // Also the source_stable_id must be in the database, to create a genetic profile link.
-    	if (geneticProfile.getGeneticAlterationType() == GeneticAlterationType.GENESET_SCORE) {
-            validateGenesetProfile(geneticProfile, file);
+    	if (geneticProfile.getGeneticAlterationType() == GeneticAlterationType.GENESET_SCORE ||
+    			(geneticProfile.getGeneticAlterationType() == GeneticAlterationType.MRNA_EXPRESSION && 
+    			geneticProfile.getDatatype().equals("Z-SCORE") && 
+    			geneticProfile.getAllOtherMetadataFields().getProperty("source_stable_id") != null)) {
             geneticProfileLink = createGeneticProfileLink(geneticProfile);
     	}
 
-        // add new profile
+		// For GSVA profiles, we want to check that the version in the meta file is
+        // the same as the version of the gene sets in the database (genesets_info table).
+    	if (geneticProfile.getGeneticAlterationType() == GeneticAlterationType.GENESET_SCORE) {
+            validateGenesetProfile(geneticProfile, file);
+    	}
+
+        // add new genetic profile
         DaoGeneticProfile.addGeneticProfile(geneticProfile);
-        
+        	
         // add genetic profile link if set
         if (geneticProfileLink != null) {
             // Set `REFERRING_GENETIC_PROFILE_ID`
@@ -136,8 +147,12 @@ public class GeneticProfileReader {
         String referenceType;
         if (geneticProfile.getDatatype().equals("P-VALUE")) {
         	referenceType = "STATISTIC";
-        } else {
+        } else if (geneticProfile.getDatatype().equals("GSVA-SCORE")) {
         	referenceType = "AGGREGATION";
+        } else if (geneticProfile.getDatatype().equals("Z-SCORE")) {
+        	referenceType = "SOURCE";
+        } else {
+        	throw new RuntimeException("Unknown datatype '" + geneticProfile.getDatatype() + "' in meta file for " + geneticProfile.getStableId());
         }
         // Set `REFERENCE_TYPE`
         geneticProfileLink.setReferenceType(referenceType);

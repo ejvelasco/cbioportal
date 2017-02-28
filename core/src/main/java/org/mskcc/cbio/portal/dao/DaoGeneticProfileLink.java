@@ -47,7 +47,7 @@ public class DaoGeneticProfileLink {
         
         try {
         	// Open connection to database
-            connection = JdbcUtil.getDbConnection(DaoGenesetHierarchy.class);
+            connection = JdbcUtil.getDbConnection(DaoGeneticProfileLink.class);
 	        
 	        // Prepare SQL statement
             preparedStatement = connection.prepareStatement("INSERT INTO genetic_profile_link " 
@@ -63,7 +63,7 @@ public class DaoGeneticProfileLink {
         } catch (SQLException e) {
             throw new DaoException(e);
         } finally {
-            JdbcUtil.closeAll(DaoGenesetInfo.class, connection, preparedStatement, resultSet);
+            JdbcUtil.closeAll(DaoGeneticProfileLink.class, connection, preparedStatement, resultSet);
         }
     }
 }

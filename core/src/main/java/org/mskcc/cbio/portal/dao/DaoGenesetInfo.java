@@ -47,7 +47,7 @@ public class DaoGenesetInfo {
         
         try {
         	// Open connection to database
-            connection = JdbcUtil.getDbConnection(DaoGenesetHierarchy.class);
+            connection = JdbcUtil.getDbConnection(DaoGenesetInfo.class);
 	        
 	        // Prepare SQL statement
             preparedStatement = connection.prepareStatement("INSERT INTO geneset_info " + "(GENESET_VERSION) VALUES(?)");
@@ -73,7 +73,7 @@ public class DaoGenesetInfo {
         
         try {
         	// Open connection to database
-            connection = JdbcUtil.getDbConnection(DaoGenesetHierarchy.class);
+            connection = JdbcUtil.getDbConnection(DaoGenesetInfo.class);
 	        
 	        // Prepare SQL statement
             preparedStatement = connection.prepareStatement("UPDATE geneset_info SET GENESET_VERSION=?");
@@ -131,7 +131,7 @@ public class DaoGenesetInfo {
 	    PreparedStatement pstmt = null;
 	    ResultSet rs = null;
 	    try {
-	        con = JdbcUtil.getDbConnection(DaoGeneset.class);
+	        con = JdbcUtil.getDbConnection(DaoGenesetInfo.class);
 	
 	        pstmt = con.prepareStatement("DELETE FROM geneset_info");
 	        pstmt.executeUpdate();
@@ -140,7 +140,7 @@ public class DaoGenesetInfo {
 	        throw new DaoException(e);
 	    } 
 	    finally {
-	        JdbcUtil.closeAll(DaoGeneset.class, con, pstmt, rs);
+	        JdbcUtil.closeAll(DaoGenesetInfo.class, con, pstmt, rs);
 	    }
     }
 }

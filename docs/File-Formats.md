@@ -369,8 +369,6 @@ SAMPLE_ID_2<TAB>2<TAB>5512374<TAB>159004775<TAB>80678<TAB>-0.0013
 ...
 ```
 
-
-
 ## Expression Data
 
 An expression data file is a two dimensional matrix with a gene per row and a sample per column.  For each gene-sample pair, a real number represents the gene expression in that sample.  
@@ -396,15 +394,15 @@ datatype | stable_id | description
 --- | --- | ---
 CONTINUOUS|mrna_U133|Affymetrix U133 Array
 Z-SCORE|mrna_U133_Zscores|Affymetrix U133 Array
-Z-SCORE|rna_seq_mrna_median_Zscores|RNA-seq data
-Z-SCORE|mrna_median_Zscores|mRNA data
 CONTINUOUS|rna_seq_mrna|RNA-seq data
+Z-SCORE|rna_seq_mrna_median_Zscores|RNA-seq data
 CONTINUOUS|rna_seq_v2_mrna|RNA-seq data
 Z-SCORE|rna_seq_v2_mrna_median_Zscores|RNA-seq data
 CONTINUOUS|mirna|MicroRNA data
 Z-SCORE|mirna_median_Zscores|MicroRNA data
 Z-SCORE|mrna_merged_median_Zscores|?
 CONTINUOUS|mrna|mRNA data
+Z-SCORE|mrna_median_Zscores|mRNA data
 DISCRETE|mrna_outliers|mRNA data of outliers
 Z-SCORE|mrna_zbynorm|?
 CONTINUOUS|rna_seq_mrna_capture|data from Roche mRNA Capture Kit
@@ -1047,13 +1045,16 @@ In both of these cases, the sample-profile matrix file does not need to be provi
 
 
 ## Gene Set Data
-A description of importing gene sets (required before loading gene set study) and gene set hierarchy data, can be found [here](Import-Gene-Sets.md).
+A description of importing gene sets (which are required before loading gene set study) can be found [here](Import-Gene-Sets.md). This page also contains a decription to import gene set hierarchy data, which is required to show a hierarchical tree on the query page to select gene sets.
 
-cBioPortal supports GSVA Scores and p-values (from bootstrapping) calculated using [Gene Set Variation Analysis]([http://www.bioconductor.org/packages/release/bioc/html/GSVA.html]) (GSVA, [Hänzelmann, 2013](http://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-14-7)). To import the GSVA Scores and p-values 2 sets of meta and data files are required, according to cBioPortal data loading specifications for study data. One set is used for GSVA scores, and one for the respective GSVA p-values of these scores. It is important that the dimensions of the GSVA Score and p-value file are the same and that they contain the same gene sets and samples.
+cBioPortal supports GSVA scores and GSVA-like scores, such as ssGSEA. The [Gene Set Variation Analysis]([http://www.bioconductor.org/packages/release/bioc/html/GSVA.html]) method in R (GSVA, [Hänzelmann, 2013](http://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-14-7)) can calculate several types of scores (specified with the `methods=` argument) and outputs a score between -1 and 1. The GSVA method also calculates a p-value per score using a boothstrapping method. 
 
-### GSVA Score meta file
-The meta file will be similar to meta files of other genetic profiles, such as mRNA expression. These are the required fields: 
+To import the GSVA(-like) data, a score and p-value data file are required. It is important that the dimensions of the score and p-value file are the same and that they contain the same gene sets and samples. Both data files require a meta file.
 
+### GSVA score meta file
+The meta file will be similar to meta files of other genetic profiles, such as mRNA expression. For GSVA-like scores, GSVA-SCORE is used as datatype. 
+
+Required fields: 
 ```
 cancer_study_identifier: Same value as specified in study meta file
 genetic_alteration_type: GENESET_SCORE
@@ -1071,20 +1072,20 @@ Example:
 cancer_study_identifier: study_es_0
 genetic_alteration_type: GENESET_SCORE
 datatype: GSVA-SCORE
-stable_id: gsva_oncogenic_sets_scores
-source_stable_id: rna_seq_v2_mrna
+stable_id: gsva_scores
+source_stable_id: rna_seq_mrna
 profile_name: GSVA scores on oncogenic signatures gene sets
 profile_description: GSVA scores on oncogenic signatures gene sets using mRNA expression data calculated with GSVA version x with parameters x and y.
 data_filename: data_gsva_scores.txt
 geneset_def_version: 1
 ```
 
-### GSVA Score data file
-The data file will be a simple tab separated format, similar to the expression data  file: each sample is a column, each gene set a row, each cell represents the GSVA score for that sample x gene set combination.
+### GSVA score data file
+The data file will be a simple tab separated format, similar to the expression data file: each sample is a column, each gene set a row, each cell contains the GSVA score for that sample x gene set combination.
 
 The first column is the GENESET_ID. This contains the EXTERNAL_ID or "stable id" (MsigDB calls this "standard name") of the gene set. The other colums are the sample columns: An additional column for each sample in the dataset using the sample id as the column header.
 
-The cells contain the GSVA score: which is real number, between -1.0 and 1.0, representing the GSVA score for the gene set in the respective sample, or  NA for when the GSVA score for the gene set in the respective sample could not be (or was not) calculated. Example with 2 gene sets and 3 samples: 
+The cells contain the GSVA(-like) score: which is real number, between -1.0 and 1.0, representing the score for the gene set in the respective sample, or NA when the score for the gene set in the respective sample could not be (or was not) calculated. Example with 2 gene sets and 3 samples: 
 
 | GENESET_ID                      | TCGA-AO-A0J | TCGA-A2-A0Y | TCGA-A2-A0S |
 |---------------------------------|-------------|-------------|-------------|
@@ -1093,7 +1094,8 @@ The cells contain the GSVA score: which is real number, between -1.0 and 1.0, re
 | ..                              |             |             |             |
 
 ### GSVA p-value meta file
-The meta file will be similar to meta files of other genetic profiles, such as mRNA expression. These are the required fields: 
+
+Required fields: 
 ```
 cancer_study_identifier: Same value as specified in study meta file
 genetic_alteration_type: GENESET_SCORE
@@ -1105,13 +1107,14 @@ profile_description: A description of the data processing done.
 data_filename: <your GSVA p-value datafile>
 geneset_def_version: Version of the gene sets definition this calculation was based on. 
 ```
+
 Example:
 ```
 cancer_study_identifier: study_es_0
 genetic_alteration_type: GENESET_SCORE
 datatype: P-VALUE
-stable_id: gsva_oncogenic_sets_pvalues
-source_stable_id: gsva_oncogenic_sets_scores
+stable_id: gsva_pvalues
+source_stable_id: gsva_scores
 profile_name: GSVA p-values for GSVA scores on oncogenic signatures gene sets
 profile_description: GSVA p-values for GSVA scores on oncogenic signatures gene sets using mRNA expression data calculated with the bootstrapping method in GSVA version x with parameters x and y.
 data_filename: data_gsva_pvalues.txt
@@ -1119,11 +1122,11 @@ geneset_def_version: 1
 ```
 
 ### GSVA p-value data file
-The data file will be a simple tab separated format, similar to the GSVA score file: each sample is a column, each gene set a row, each cell represents the GSVA p-value for the score found for that sample x gene set combination.
+The data file will be a simple tab separated format, similar to the score file: each sample is a column, each gene set a row, each cell contains the p-value for the score found for sample x gene set combination.
 
 The first column is the GENESET_ID. This contains the EXTERNAL_ID or "stable id" (MsigDB calls this "standard name") of the gene set. The other colums are the sample columns: An additional column for each sample in the dataset using the sample id as the column header.
 
-The cells contain the p-value for the GSVA score: A real number, between 0.0 and 1.0, representing the p-value for the GSVA score calculated for the gene set in the respective sample, or NA for when the GSVA score for the gene is also NA. Example with 2 gene sets and 3 samples: 
+The cells contain the p-value for the GSVA score: A real number, between 0.0 and 1.0, representing the p-value for the GSVA score calculated for the gene set in the respective sample, or NA when the score for the gene is also NA. Example with 2 gene sets and 3 samples: 
 
 | GENESET_ID                      | TCGA-AO-A0J | TCGA-A2-A0Y | TCGA-A2-A0S |
 |---------------------------------|-------------|-------------|-------------|

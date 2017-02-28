@@ -19,6 +19,16 @@ from subprocess import Popen, PIPE, STDOUT
 ERROR_FILE = sys.stderr
 OUTPUT_FILE = sys.stdout
 
+# global variables to check `source_stable_id` for `genomic_profile_link`
+expression_stable_ids = []
+gsva_scores_stable_id = ""
+expression_zscores_source_stable_ids = {}
+gsva_scores_source_stable_id = ""
+gsva_pvalues_source_stable_id = ""
+expression_zscores_filename = ""
+gsva_scores_filename = ""
+gsva_pvalues_filename = ""
+
 IMPORT_STUDY_CLASS = "org.mskcc.cbio.portal.scripts.ImportCancerStudy"
 UPDATE_STUDY_STATUS_CLASS = "org.mskcc.cbio.portal.scripts.UpdateCancerStudy"
 REMOVE_STUDY_CLASS = "org.mskcc.cbio.portal.scripts.RemoveCancerStudy"
@@ -134,6 +144,7 @@ META_FIELD_MAP = {
         'genetic_alteration_type': True,
         'datatype': True,
         'stable_id': True,
+        'source_stable_id': False,
         'show_profile_in_analysis_tab': True,
         'profile_name': True,
         'profile_description': True,
@@ -684,9 +695,45 @@ def parse_metadata_file(filename,
                 extra={'filename_': filename,
                        'cause': metaDictionary['swissprot_identifier']})
             meta_file_type = None
+    
+    """
+    Save information regarding `source_stable_id`, so that after all meta files are validated, 
+    we can validate fields between meta files in validate_dependencies() in validateData.py
+    """
+    global expression_stable_ids
+    global gsva_scores_stable_id
+    global expression_zscores_source_stable_ids
+    global gsva_scores_source_stable_id
+    global gsva_pvalues_source_stable_id
+    global gsva_scores_filename
+    global gsva_pvalues_filename
+    
+    # save all expression `stable_id` in list
+    if meta_file_type is MetaFileTypes.EXPRESSION:
+        if 'stable_id' in metaDictionary:
+            expression_stable_ids.append(metaDictionary['stable_id'])
+            
+            # save all zscore expression `source_stable_id` in list
+            # multiple zscore expression files are possible, and we want to validate them all
+            if metaDictionary['datatype'] == "Z-SCORE":
+                if 'source_stable_id' in metaDictionary:
+                    expression_zscores_source_stable_ids[metaDictionary['source_stable_id']] = filename
+     
+    # save stable_id and source_stable_id of GSVA Scores 
+    if meta_file_type is MetaFileTypes.GSVA_SCORES:
+        gsva_scores_filename = filename
+        if 'source_stable_id' in metaDictionary:
+            gsva_scores_source_stable_id = metaDictionary['source_stable_id']
 
-    ### TODO: Validate that `source_stable_id` in GSVA_SCORES is expression stable id and
-    ###       `source_stable_id` in GSVA_PVALES is gsva score stable id.			
+        # save 'stable_id' to check the 'source_stable_id' in GSVA_PVALUES file
+        if 'stable_id' in metaDictionary:
+            gsva_scores_stable_id = metaDictionary['stable_id']
+         
+    # save stable_id and source_stable_id of GSVA Pvalues 
+    if meta_file_type is MetaFileTypes.GSVA_PVALUES:
+        gsva_pvalues_filename = filename
+        if 'source_stable_id' in metaDictionary:
+            gsva_pvalues_source_stable_id = metaDictionary['source_stable_id']
 
     logger.info('Validation of meta file complete', extra={'filename_': filename})
     return metaDictionary, meta_file_type

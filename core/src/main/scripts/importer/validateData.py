@@ -74,8 +74,8 @@ VALIDATOR_IDS = {
     cbioportal_common.MetaFileTypes.GISTIC_GENES: 'GisticGenesValidator',
     cbioportal_common.MetaFileTypes.TIMELINE:'TimelineValidator',
     cbioportal_common.MetaFileTypes.MUTATION_SIGNIFICANCE:'MutationSignificanceValidator',
-    cbioportal_common.MetaFileTypes.GSVA_SCORES:'GSVAScoreValidator',
-    cbioportal_common.MetaFileTypes.GSVA_PVALUES:'GSVAPvalueValidator'
+    cbioportal_common.MetaFileTypes.GSVA_SCORES:'GsvaScoreValidator',
+    cbioportal_common.MetaFileTypes.GSVA_PVALUES:'GsvaPvalueValidator'
 }
 
 
@@ -2579,13 +2579,13 @@ class GisticGenesValidator(Validator):
             return parsed_value
 
 
-class GSVAWiseFileValidator(FeaturewiseFileValidator):
+class GsvaWiseFileValidator(FeaturewiseFileValidator):
 
     """FeatureWiseValidator that has Gene set ID as feature column."""
     
     REQUIRED_HEADERS = ['geneset_id']
     def __init__(self, *args, **kwargs):
-        super(GSVAWiseFileValidator, self).__init__(*args, **kwargs)
+        super(GsvaWiseFileValidator, self).__init__(*args, **kwargs)
         self.geneset_ids = []
 
     def checkHeader(self, cols):
@@ -2593,7 +2593,7 @@ class GSVAWiseFileValidator(FeaturewiseFileValidator):
 
         Return the number of fatal errors.
         """
-        num_errors = super(GSVAWiseFileValidator, self).checkHeader(cols)
+        num_errors = super(GsvaWiseFileValidator, self).checkHeader(cols)
 
         global GSVA_SAMPLE_IDS
 
@@ -2644,14 +2644,14 @@ class GSVAWiseFileValidator(FeaturewiseFileValidator):
         if GSVA_GENESET_IDS == None:
             GSVA_GENESET_IDS = self.geneset_ids
         else:
-            ### Check if geneset ids are the same 
+            # Check if geneset ids are the same 
             if not GSVA_GENESET_IDS == self.geneset_ids:
                 self.logger.error(
                     'First columns of GSVA score and p-value files are not equal')
-        super(GSVAWiseFileValidator, self).onComplete()
+        super(GsvaWiseFileValidator, self).onComplete()
 
 
-class GSVAScoreValidator(GSVAWiseFileValidator):
+class GsvaScoreValidator(GsvaWiseFileValidator):
     """Validator for files containing scores per gegene setrom GSVA algorithm.
 
     GSVA is an algorithm in R that outputs a score and p-value (from 
@@ -2669,7 +2669,7 @@ class GSVAScoreValidator(GSVAWiseFileValidator):
                                      'cause': value})
      
  
-class GSVAPvalueValidator(GSVAWiseFileValidator):
+class GsvaPvalueValidator(GsvaWiseFileValidator):
     """Validator for files containing p-values per gene set from GSVA algorithm.
 
     GSVA is an algorithm in R that outputs a score and p-value (from bootstrapping)
@@ -2769,7 +2769,8 @@ def process_metadata_files(directory, portal_instance, logger, relaxed_mode):
             validators_by_type[meta_file_type].append(validator)
         else:
             validators_by_type[meta_file_type].append(None)
-        
+
+    
 
     if study_cancer_type is None:
         logger.error(
@@ -2879,6 +2880,87 @@ def validate_defined_caselists(cancer_study_id, case_list_ids, file_types, logge
                     "'add_global_case_list: true' to the study metadata file",
                 cancer_study_id + '_all')
     # TODO: check for required suffixes based on the defined profiles
+    
+def validate_dependencies(validators_by_meta_type, logger):
+    """
+    Validation after all meta files are individually validated
+    """
+    # retrieve values from cbioportal_common.py
+    expression_stable_ids = cbioportal_common.expression_stable_ids
+    expression_zscores_source_stable_ids = cbioportal_common.expression_zscores_source_stable_ids
+    gsva_scores_stable_id = cbioportal_common.gsva_scores_stable_id
+    gsva_scores_source_stable_id = cbioportal_common.gsva_scores_source_stable_id
+    gsva_pvalues_source_stable_id = cbioportal_common.gsva_pvalues_source_stable_id
+    gsva_scores_filename = cbioportal_common.gsva_scores_filename
+    gsva_pvalues_filename = cbioportal_common.gsva_pvalues_filename
+    
+    # validation specific for expression data
+    if "meta_expression" in validators_by_meta_type:
+
+        # check if 'source_stable_id' of EXPRESSION Z-SCORE is an EXPRESSION 'stable_id'
+        for expression_zscores_source_stable_id in expression_zscores_source_stable_ids:
+            
+            if not expression_zscores_source_stable_id in expression_stable_ids:
+                logger.error(
+                    "Invalid source_stable_id. Expected one of ['" + "', '".join(expression_stable_ids) +
+                    "'], which are stable ids of expression files in this study",
+                    extra={'filename_': expression_zscores_source_stable_ids[expression_zscores_source_stable_id],
+                           'cause': expression_zscores_source_stable_id})
+
+    # validation specific for GSVA data
+    if any(m in validators_by_meta_type for m in ["meta_gsva_pvalues", "meta_gsva_scores"]):
+        
+        # When missing a gsva file, no subsequent validation will be done
+        missing_gsva_file = False
+        
+        # check if both files are present
+        if not "meta_gsva_pvalues" in validators_by_meta_type:
+            logger.error('Required meta GSVA p-value file is missing')
+            missing_gsva_file = True
+        if not "meta_gsva_scores" in validators_by_meta_type:
+            logger.error('Required meta GSVA score file is missing')
+            missing_gsva_file = True
+        if not "meta_expression" in validators_by_meta_type:
+            logger.error('Required meta expression file is missing.')
+            missing_gsva_file = True
+        
+        # check `source_stable_id` in GSVA_SCORES and GSVA_PVALUES
+        if not missing_gsva_file:
+            
+            # check if 'source_stable_id' of GSVA_SCORES is an EXPRESSION 'stable_id'
+            if not gsva_scores_source_stable_id in expression_stable_ids:
+                logger.error(
+                    "Invalid source_stable_id. Expected one of ['" + "', '".join(expression_stable_ids) +
+                    "'], which are stable ids of expression files in this study",
+                    extra={'filename_': gsva_scores_filename,
+                           'cause': gsva_scores_source_stable_id})
+        
+            # check if 'source_stable_id'of GSVA_PVALUES is an GSVA_SCORES 'stable_id'
+            if not gsva_pvalues_source_stable_id == gsva_scores_stable_id:
+                logger.error(
+                    "Invalid source_stable_id. Expected '" + gsva_scores_stable_id + "', "
+                    "which is the stable id of the gsva score file in this study",
+                    extra={'filename_': gsva_pvalues_filename,
+                           'cause': gsva_pvalues_source_stable_id})
+                            
+            # Validate that there is a Z-SCORE expression file for GSVA study
+            if len(expression_zscores_source_stable_ids) == 0:
+                logger.error(
+                    "Study contains GSVA data and is missing Z-Score expression file. "
+                    "Please add a Z-Score expression file calculated from the same "
+                    "expression file used to calculate GSVA scores")
+            else:
+                # Validate that GSVA_SCORES 'source_stable_id' is also a 'source_stable_id'
+                # in a Z-SCORE expression file
+                if not gsva_scores_source_stable_id in expression_zscores_source_stable_ids.keys():
+                    logger.error(
+                        "source_stable_id does not match source_stable_id from Z-Score expression files. "
+                        "Please make sure sure that Z-Score expression file is added for '" +  
+                        gsva_scores_source_stable_id + "'. Current Z-Score source stable ids found are ['" + 
+                        "', '".join(expression_zscores_source_stable_ids.keys()) +"'].",
+                        extra={'filename_': gsva_scores_filename,
+                               'cause': gsva_scores_source_stable_id})
+        
 
 def request_from_portal_api(server_url, api_name, logger):
     """Send a request to the portal API and return the decoded JSON object."""    
@@ -3095,6 +3177,8 @@ def validate_study(study_dir, portal_instance, logger, relaxed_mode):
      study_cancer_type,
      study_id) = process_metadata_files(study_dir, portal_instance, logger, relaxed_mode)
 
+    print validators_by_meta_type
+      
     # first parse and validate cancer type files
     studydefined_cancer_types = []
     if cbioportal_common.MetaFileTypes.CANCER_TYPE in validators_by_meta_type:
@@ -3168,7 +3252,7 @@ def validate_study(study_dir, portal_instance, logger, relaxed_mode):
                 validators_by_meta_type[
                     cbioportal_common.MetaFileTypes.PATIENT_ATTRIBUTES])})
 
-    # next validate all other data files
+    # next validate all other data files except gsva
     for meta_file_type in validators_by_meta_type:
         # skip cancer type and clinical files, they have already been validated
         if meta_file_type in (cbioportal_common.MetaFileTypes.CANCER_TYPE,
@@ -3179,22 +3263,9 @@ def validate_study(study_dir, portal_instance, logger, relaxed_mode):
             if validator is None:
                 continue
             validator.validate()
-	        
-    # in case of gsva data, both score and p-value data must be present
-    if any(m in validators_by_meta_type for m in ("meta_gsva_pvalues", "meta_gsva_scores")):
-        ### Check if both files are present
-        if not "meta_gsva_pvalues" in validators_by_meta_type:
-            logger.error(
-            'Required meta GSVA p-value file is missing')
-            
-        if not "meta_gsva_scores" in validators_by_meta_type:
-            logger.error(
-            'Required meta GSVA score file is missing')
 
-        if not "meta_expression" in validators_by_meta_type:
-			logger.error(
-			'Required meta expression file is missing.'
-			)
+    # additional validation after all meta files are validated
+    validate_dependencies(validators_by_meta_type, logger)
 
     # finally validate the case list directory if present
     case_list_dirname = os.path.join(study_dir, 'case_lists')

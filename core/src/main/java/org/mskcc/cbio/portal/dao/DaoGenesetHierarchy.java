@@ -70,9 +70,7 @@ public class DaoGenesetHierarchy {
             resultSet = preparedStatement.getGeneratedKeys();
             if (resultSet.next()) {
             	genesetHierarchy.setNodeId(resultSet.getInt(1));	
-            }
-            
-            
+            }       
         } catch (SQLException e) {
             throw new DaoException(e);
         } finally {
@@ -107,7 +105,6 @@ public class DaoGenesetHierarchy {
             	return true;
             }
             return false;
-
         } catch (SQLException e) {
             throw new DaoException(e);
         } finally {
@@ -128,11 +125,9 @@ public class DaoGenesetHierarchy {
         	connection = JdbcUtil.getDbConnection(DaoGenesetHierarchy.class);
         	preparedStatement = connection.prepareStatement("DELETE FROM geneset_hierarchy");
         	preparedStatement.executeUpdate();
-        }
-        catch (SQLException e) {
+        } catch (SQLException e) {
             throw new DaoException(e);
-        } 
-        finally {
+        } finally {
             JdbcUtil.closeAll(DaoGenesetHierarchy.class, connection, preparedStatement, resultSet);
         }
     }
