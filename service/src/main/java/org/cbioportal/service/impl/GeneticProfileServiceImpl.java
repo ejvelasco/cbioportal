@@ -64,4 +64,10 @@ public class GeneticProfileServiceImpl implements GeneticProfileService {
 
 		return geneticProfileRepository.getGeneticProfilesReferredBy(referringGeneticProfileId);
 	}
+
+	@Override
+	public List<GeneticProfile> getGeneticProfilesReferringTo(String referredGeneticProfileId) {
+		
+		return geneticProfileRepository.getGeneticProfilesReferringTo(referredGeneticProfileId);
+	}
 }
